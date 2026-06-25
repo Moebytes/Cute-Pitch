@@ -53,6 +53,14 @@ public:
         float value = renderWaveform(this->phase);
         if (this->phaseInvert) value *= -1.0f;
 
+        if (this->syncedBeats > 0.0f) {
+            double lfoFrequency = (this->bpm / 60.0) / this->syncedBeats;
+            this->phase += static_cast<float>(lfoFrequency / this->sampleRate);
+        }
+
+        if (this->phase >= 1.0f) this->phase -= 1.0f;
+        if (this->phase < 0.0f) this->phase += 1.0f;
+
         return value;
     }
 

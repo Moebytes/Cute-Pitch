@@ -97,13 +97,6 @@ auto Processor::processBlock(AudioBuffer<float>& buffer, [[maybe_unused]] MidiBu
     this->parameters.setHostInfo(bpm, ppq, timeSignature);
     this->parameters.blockUpdate();
 
-    double ppqPerSample = (bpm / 60.0) / getSampleRate();
-
-    if (ppq > 0.0) {
-        double samplePPQ = ppq * ppqPerSample;
-        this->parameters.pitchLFO.syncPPQ(samplePPQ);
-    }
-
     this->parameters.update();
 
     int blocks = this->pitchShifter.blockSamples();

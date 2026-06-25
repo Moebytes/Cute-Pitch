@@ -9,8 +9,8 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(&p), processor(p),
 
     webview.goToURL(webview.getResourceProviderRoot());
 
-    int width = 350;//static_cast<int>(Settings::getSettingKey("windowWidth", 300));
-    int height = 550;//static_cast<int>(Settings::getSettingKey("windowHeight", 500));
+    int width = static_cast<int>(Settings::getSettingKey("windowWidth", 350));
+    int height = static_cast<int>(Settings::getSettingKey("windowHeight", 550));
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
     int minWidth = 240;
