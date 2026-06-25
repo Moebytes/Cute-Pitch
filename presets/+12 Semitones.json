@@ -1,0 +1,16 @@
+{
+  "plugin": "Cute Pitch",
+  "version": "1.0.0",
+  "name": "+12 Semitones",
+  "author": "Moebytes",
+  "modified": "2026-06-24T23:11:45.929-04:00",
+  "presetFormat": 1,
+  "parameters": {
+    "pitch": "12.0st",
+    "formant": "0.0st",
+    "pitchLFOType": "square",
+    "pitchLFORate": "1/4",
+    "pitchLFOAmount": "0%",
+    "pitchLFOInvert": "Off"
+  }
+}

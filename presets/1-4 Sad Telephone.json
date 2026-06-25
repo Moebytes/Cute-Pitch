@@ -1,0 +1,16 @@
+{
+  "plugin": "Cute Pitch",
+  "version": "1.0.0",
+  "name": "1-4 Sad Telephone",
+  "author": "Moebytes",
+  "modified": "2026-06-24T23:15:06.725-04:00",
+  "presetFormat": 1,
+  "parameters": {
+    "pitch": "-12.0st",
+    "formant": "0.0st",
+    "pitchLFOType": "square",
+    "pitchLFORate": "1/4",
+    "pitchLFOAmount": "100%",
+    "pitchLFOInvert": "Off"
+  }
+}

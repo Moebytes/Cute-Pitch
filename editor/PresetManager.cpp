@@ -1,0 +1,462 @@
+#include "PresetManager.h"
+#include "Functions.hpp"
+#include "Settings.hpp"
+#include "ParameterIDs.hpp"
+#include "EventEmitter.hpp"
+#include "NativeMenuBridge.h"
+
+PresetManager::PresetManager(AudioProcessorValueTreeState& tree) : tree(tree) {
+    this->loadFactoryPresets();
+    this->loadUserPresets();
+}
+
+auto PresetManager::openPresetMenu([[maybe_unused]] const Array<var>& args, 
+    WebBrowserComponent::NativeFunctionCompletion completion) -> void {
+
+        std::map<int, std::string> items = {
+            {1, "Init Preset"},
+            {2, "Load Preset"},
+            {3, "Save Preset"},
+            {4, "Add User Folder"}
+        };
+
+        auto rawUserFolder = Settings::getSettingKey("userFolder", "").toString();
+        std::string userFolder = "";
+        if (!rawUserFolder.isEmpty()) {
+            userFolder = File{rawUserFolder}.getFileName().toStdString();
+            items.insert(std::make_pair(5, "Remove User Folder"));
+        }
+
+        int factoryID = static_cast<int>(items.size()) + 1;
+        std::map<int, std::string> factoryItems;
+        for (int i = 0; i < static_cast<int>(factoryPresetNames.size()); i++) {
+            factoryItems[factoryID + i] = this->factoryPresetNames[static_cast<size_t>(i)].toStdString();
+        }
+
+        int userContentID = factoryID + static_cast<int>(factoryItems.size()) + 1;
+        std::map<int, std::string> userItems;
+        for (int i = 0; i < static_cast<int>(userPresetNames.size()); i++) {
+            userItems[userContentID + i] = this->userPresetNames[static_cast<size_t>(i)].toStdString();
+        }
+
+        auto menuClick = [this, completion](std::string action){
+            if (action == "Init Preset") {
+                this->initPreset();
+                this->currentPresetName = "Default";
+                this->presetFolder = "none";
+                this->presetIndex = 0;
+                EventEmitter::instance().emitEvent("presetChanged", this->currentPresetName);
+                completion(this->currentPresetName);
+            } else if (action == "Load Preset") {
+                this->loadPresetFromFile([this, completion](){
+                    completion(this->currentPresetName);
+                });
+            } else if (action == "Save Preset") {
+                this->savePresetToFile();
+            } else if (action == "Add User Folder") {
+                this->addUserFolder();
+            } else if (action == "Remove User Folder") {
+                this->removeUserFolder();
+            }
+        };
+
+        auto presetClick = [this, completion](int presetIdx) {
+            if (presetIdx >= 0 && presetIdx < static_cast<int>(this->factoryPresets.size())) {
+                auto presetName = this->factoryPresetNames[static_cast<size_t>(presetIdx)];
+                auto json = this->factoryPresets[presetName];
+                this->loadPreset(json);
+                this->currentPresetName = presetName;
+                this->presetIndex = presetIdx;
+                this->presetFolder = "factory";
+                EventEmitter::instance().emitEvent("presetChanged", this->currentPresetName);
+                completion(this->currentPresetName);
+            }
+        };
+
+        auto userPresetClick = [this, completion](int presetIdx) {
+            if (presetIdx >= 0 && presetIdx < static_cast<int>(this->userPresets.size())) {
+                auto presetName = this->userPresetNames[static_cast<size_t>(presetIdx)];
+                auto json = this->userPresets[presetName];
+                this->loadPreset(json);
+                this->currentPresetName = presetName;
+                this->presetIndex = presetIdx;
+                this->presetFolder = "user";
+                EventEmitter::instance().emitEvent("presetChanged", this->currentPresetName);
+                completion(this->currentPresetName);
+            }
+        };
+
+        #if JUCE_MAC
+            showNativeMacMenu(items, factoryItems, userItems, userFolder,
+                this->currentPresetName.toStdString(), this->presetFolder.toStdString(), [items, menuClick, presetClick, 
+                userPresetClick, factoryID, userContentID](int resultID) {
+                if (resultID == 0) return;
+
+                if (resultID < factoryID) {
+                    auto it = items.find(resultID);
+                    if (it != items.end()) {
+                        menuClick(it->second);
+                    }
+                } else if (resultID >= factoryID && resultID < userContentID) {
+                    int presetIdx = resultID - factoryID;
+                    presetClick(presetIdx);
+                } else if (resultID >= userContentID) {
+                    int presetIdx = resultID - userContentID;
+                    userPresetClick(presetIdx);
+                }
+            });
+        #elif _WIN32
+            showNativeWinMenu(items, factoryItems, userItems, userFolder,
+                this->currentPresetName.toStdString(), this->presetFolder.toStdString(),
+                [items, menuClick, presetClick, userPresetClick, factoryID, userContentID](int resultID) {
+                    if (resultID == 0) return;
+        
+                    if (resultID < factoryID) {
+                        auto it = items.find(resultID);
+                        if (it != items.end()) {
+                            menuClick(it->second);
+                        }
+                    } else if (resultID >= factoryID && resultID < userContentID) {
+                        int presetIdx = resultID - factoryID;
+                        presetClick(presetIdx);
+                    } else if (resultID >= userContentID) {
+                        int presetIdx = resultID - userContentID;
+                        userPresetClick(presetIdx);
+                    }
+                });
+        #else
+            PopupMenu menu;
+            for (const auto& [id, label] : items) {
+                menu.addItem(id, label);
+            }
+
+            PopupMenu factoryMenu;
+            for (int i = 0; i < static_cast<int>(factoryPresetNames.size()); i++) {
+                int itemID = factoryID + i;
+                auto name = this->factoryPresetNames[static_cast<size_t>(i)];
+                bool isTicked = (this->presetFolder == "factory" && this->currentPresetName == name);
+                factoryMenu.addItem(itemID, this->factoryPresetNames[static_cast<size_t>(i)], true, isTicked);
+            }
+            menu.addSubMenu("Factory", factoryMenu);
+
+            if (!userFolder.empty()) {
+                PopupMenu userMenu;
+                for (int i = 0; i < static_cast<int>(userPresetNames.size()); i++) {
+                    int itemID = userContentID + i;
+                    auto name = this->userPresetNames[static_cast<size_t>(i)];
+                    bool isTicked = (this->presetFolder == "user" && this->currentPresetName == name);
+                    userMenu.addItem(itemID, this->userPresetNames[static_cast<size_t>(i)], true, isTicked);
+                }
+                menu.addSubMenu(userFolder, userMenu);
+            }
+
+            auto mousePos = Desktop::getMousePosition();
+            
+            auto options = PopupMenu::Options()
+                .withPreferredPopupDirection(PopupMenu::Options::PopupDirection::upwards)
+                .withTargetScreenArea(Rectangle<int> {mousePos.x - 60, mousePos.y - 5, 1, 1});
+
+            PopupMenu::dismissAllActiveMenus();
+            menu.showMenuAsync(options, [items, menuClick, presetClick, userPresetClick, factoryID, 
+                userContentID, completion](int resultID) {
+                if (resultID == 0) return;
+
+                if (resultID < factoryID) {
+                    auto it = items.find(resultID);
+                    if (it != items.end()) {
+                        auto action = it->second;
+                        menuClick(action);
+                    }
+                } else if (resultID >= factoryID && resultID < userContentID) {
+                    int presetIdx = resultID - factoryID;
+                    presetClick(presetIdx);
+                } else if (resultID >= userContentID) {
+                    int presetIdx = resultID - userContentID;
+                    userPresetClick(presetIdx);
+                }
+            });
+        #endif
+}
+
+auto PresetManager::prevPreset([[maybe_unused]] const Array<var>& args,
+    WebBrowserComponent::NativeFunctionCompletion completion) -> void {
+        if (this->presetFolder == "factory") {
+            if (this->factoryPresetNames.empty()) return;
+            this->presetIndex = (this->presetIndex - 1 + static_cast<int>(factoryPresetNames.size())) % static_cast<int>(factoryPresetNames.size());
+        }
+
+        if (this->presetFolder == "user") {
+            if (this->userPresetNames.empty()) return;
+            this->presetIndex = (this->presetIndex - 1 + static_cast<int>(userPresetNames.size())) % static_cast<int>(userPresetNames.size());
+        }
+
+        auto presetName = this->setPreset(this->presetIndex);
+        return completion(presetName);
+}
+
+auto PresetManager::nextPreset([[maybe_unused]] const Array<var>& args,
+    WebBrowserComponent::NativeFunctionCompletion completion) -> void {
+        if (this->presetFolder == "factory") {
+            if (this->factoryPresetNames.empty()) return;
+            this->presetIndex = (this->presetIndex + 1) % static_cast<int>(factoryPresetNames.size());
+        }
+
+        if (this->presetFolder == "user") {
+            if (this->userPresetNames.empty()) return;
+            this->presetIndex = (this->presetIndex + 1) % static_cast<int>(userPresetNames.size());
+        }
+
+        auto presetName = this->setPreset(this->presetIndex);
+        return completion(presetName);
+}
+
+auto PresetManager::setPreset(int _presetIndex) -> String {
+    this->presetIndex = _presetIndex;
+
+    if (this->presetFolder == "factory") {
+        if (this->factoryPresetNames.empty()) return this->currentPresetName;
+        auto presetName = factoryPresetNames[static_cast<size_t>(this->presetIndex)];
+
+        auto it = factoryPresets.find(presetName);
+        if (it != factoryPresets.end()) {
+            auto jsonString = it->second;
+            this->loadPreset(jsonString);
+            this->currentPresetName = presetName;
+        }
+    }
+
+    if (this->presetFolder == "user") {
+        if (this->userPresetNames.empty()) return this->currentPresetName;
+        auto presetName = userPresetNames[static_cast<size_t>(this->presetIndex)];
+
+        auto it = userPresets.find(presetName);
+        if (it != userPresets.end()) {
+            auto jsonString = it->second;
+            this->loadPreset(jsonString);
+            this->currentPresetName = presetName;
+        }
+    }
+
+    EventEmitter::instance().emitEvent("presetChanged", this->currentPresetName);
+    return this->currentPresetName;
+}
+
+auto PresetManager::loadPresetFromFile(std::function<void()> onComplete) -> void {
+    auto directoryPath = Settings::getSettingKey("loadDirectory", Functions::getDownloadsFolder().getFullPathName());
+    File directory{directoryPath};
+
+    auto loadDialog = std::make_shared<FileChooser>(
+        "Load Preset", directory, "*.json"
+    );
+
+    loadDialog->launchAsync(FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+        [this, loadDialog, onComplete](const FileChooser& picker) {
+            auto file = picker.getResult();
+            if (file.existsAsFile()) {
+                Settings::setSettingKey("loadDirectory", file.getParentDirectory().getFullPathName());
+                auto jsonString = file.loadFileAsString();
+                auto presetName = this->loadPreset(jsonString);
+
+                this->currentPresetName = presetName;
+                this->presetIndex = 0;
+                this->presetFolder = "none";
+                onComplete();
+            }
+        }
+    );
+}
+
+auto PresetManager::savePresetToFile() -> void {
+    this->presetDialog = new AlertWindow("Save Preset", "Preset Information:", AlertWindow::NoIcon);
+    this->presetDialog->setLookAndFeel(&presetDialogTheme);
+
+    auto defaultName = this->currentPresetName;
+    if (defaultName == "Default") defaultName.clear();
+    auto defaultAuthor = Settings::getSettingKey("saveAuthor", "").toString();
+
+    this->presetDialog->addTextEditor("name", defaultName, "Name:");
+    this->presetDialog->addTextEditor("author", defaultAuthor, "Author:");
+
+    this->presetDialog->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
+    this->presetDialog->addButton("OK", 1, KeyPress(KeyPress::returnKey));
+
+    auto saveCallback = [this](String name, String author) {
+        auto cleanName = Functions::cleanFilename(name);
+
+        auto directoryPath = Settings::getSettingKey("saveDirectory", Functions::getDownloadsFolder().getFullPathName());
+        File directory{directoryPath};
+
+        auto saveDialog = std::make_shared<FileChooser>(
+            "Save Preset", directory.getChildFile(cleanName + ".json")
+        );
+
+        saveDialog->launchAsync(FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
+            [this, saveDialog, name, author](const FileChooser& picker) {
+                auto file = picker.getResult();
+                if (file != File{}) {
+                    Settings::setSettingKey("saveAuthor", author);
+                    Settings::setSettingKey("saveDirectory", file.getParentDirectory().getFullPathName());
+                    auto jsonString = this->savePreset(name, author);
+                    file.replaceWithText(jsonString);
+                    file.revealToUser();
+                }
+            }
+        );
+    };
+
+    auto nameCallback = ModalCallbackFunction::create([this, saveCallback](int result) {
+        if (result == 1) {
+            auto name = this->presetDialog->getTextEditor("name")->getText();
+            auto author = this->presetDialog->getTextEditor("author")->getText();
+
+            saveCallback(name, author);
+        }
+
+        this->presetDialog->setLookAndFeel(nullptr);
+        delete this->presetDialog;
+        this->presetDialog = nullptr;
+    });
+
+    this->presetDialog->enterModalState(true, nameCallback, true);
+}
+
+auto PresetManager::loadFactoryPresets() -> void {
+    MemoryInputStream zipStream(BinaryData::presets_zip, BinaryData::presets_zipSize, false);
+    ZipFile zip{zipStream};
+
+    this->factoryPresetNames.clear();
+    this->factoryPresets.clear();
+
+    for (int i = 0; i < zip.getNumEntries(); i++) {
+        auto* entry = zip.getEntry(i);
+
+        if (entry == nullptr || !entry->filename.endsWithIgnoreCase(".json")) continue;
+
+        std::unique_ptr<InputStream> inputStream{zip.createStreamForEntry(i)};
+        if (inputStream == nullptr) continue;
+        
+        auto content = inputStream->readEntireStreamAsString();
+        auto json = JSON::parse(content);
+
+        if (auto* obj = json.getDynamicObject()) {
+            auto presetName = obj->getProperty("name").toString();
+            if (presetName.isEmpty()) {
+                auto entryFile = File::createFileWithoutCheckingPath(entry->filename);
+                presetName = entryFile.getFileNameWithoutExtension();
+            }
+
+            this->factoryPresets[presetName] = content;
+            this->factoryPresetNames.push_back(presetName);
+        }
+    }
+}
+
+auto PresetManager::addUserFolder() -> void {
+    auto directoryPath = Settings::getSettingKey("userFolder", Functions::getDownloadsFolder().getFullPathName());
+    File directory{directoryPath};
+
+    auto openDialog = std::make_shared<FileChooser>(
+        "Add User Folder", directory, "*.json"
+    );
+
+    openDialog->launchAsync(FileBrowserComponent::openMode | FileBrowserComponent::canSelectDirectories,
+        [this, openDialog](const FileChooser& picker) {
+            auto folder = picker.getResult();
+            if (folder.exists() && folder.isDirectory()) {
+                Settings::setSettingKey("userFolder", folder.getFullPathName());
+                this->loadUserPresets();
+            }
+        }
+    );
+}
+
+auto PresetManager::removeUserFolder() -> void {
+    Settings::setSettingKey("userFolder", "");
+    this->userPresetNames.clear();
+    this->userPresets.clear();
+}
+
+auto PresetManager::loadUserPresets() -> void {
+    this->userPresetNames.clear();
+    this->userPresets.clear();
+
+    auto userFolder = Settings::getSettingKey("userFolder", "").toString();
+    if (userFolder.isEmpty()) return;
+
+    File userFolderDir{userFolder};
+    if (!userFolderDir.exists() || !userFolderDir.isDirectory()) return;
+
+    auto jsonFiles = userFolderDir.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.json");
+
+    for (const auto& file : jsonFiles) {
+        auto content = file.loadFileAsString();
+        auto json = JSON::parse(content);
+
+        if (auto* obj = json.getDynamicObject()) {
+            auto presetName = obj->getProperty("name").toString();
+            if (presetName.isEmpty()) presetName = file.getFileNameWithoutExtension();
+
+            this->userPresets[presetName] = content;
+            this->userPresetNames.push_back(presetName);
+        }
+    }
+}
+
+auto PresetManager::savePreset(const String& name, const String& author) -> String {
+    auto obj = std::make_unique<DynamicObject>();
+
+    obj->setProperty("plugin", JucePlugin_Name);
+    obj->setProperty("version", JucePlugin_VersionString);
+    obj->setProperty("name", name);
+    obj->setProperty("author", author);
+    obj->setProperty("modified", Time::getCurrentTime().toISO8601(true));
+    obj->setProperty("presetFormat", 1);
+
+    auto parameters = std::make_unique<DynamicObject>();
+
+    for (const auto& id : ParameterIDs::getStringKeys()) {
+        auto* param = this->tree.getParameter(id);
+
+        if (param) {
+            parameters->setProperty(id, param->getCurrentValueAsText());
+        }
+    }
+
+    obj->setProperty("parameters", var(parameters.release()));
+    auto json = var{obj.release()};
+
+    return JSON::toString(json);
+}
+
+auto PresetManager::loadPreset(const String& jsonStr) -> String {
+    auto parsed = JSON::fromString(jsonStr);
+    auto* obj = parsed.getDynamicObject();
+    if (obj == nullptr) return "";
+
+    String presetName = "";
+
+    if (obj->hasProperty("name")) {
+        presetName = obj->getProperty("name").toString();
+    }
+
+    auto parameters = var{obj->getProperty("parameters")};
+    auto* paramObj = parameters.getDynamicObject();
+    if (paramObj == nullptr) return "";
+
+    for (const auto& property : paramObj->getProperties()) {
+        auto id = property.name.toString();
+        auto* param = this->tree.getParameter(id);
+
+        float value = param->getValueForText(property.value.toString());
+        param->setValueNotifyingHost(value);
+    }
+
+    return presetName;
+}
+
+auto PresetManager::initPreset() -> void {
+    for (const auto& id : ParameterIDs::getStringKeys()) {
+        auto* param = this->tree.getParameter(id);
+        param->setValueNotifyingHost(param->getDefaultValue());
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "plugin": "Cute Pitch",
+  "version": "1.0.0",
+  "name": "1-4 Formant Speak",
+  "author": "Moebytes",
+  "modified": "2026-06-24T23:20:03.109-04:00",
+  "presetFormat": 1,
+  "parameters": {
+    "pitch": "0.0st",
+    "formant": "12.0st",
+    "pitchLFOType": "sine",
+    "pitchLFORate": "1/4",
+    "pitchLFOAmount": "100%",
+    "pitchLFOInvert": "Off"
+  }
+}

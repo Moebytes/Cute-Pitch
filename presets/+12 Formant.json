@@ -1,0 +1,16 @@
+{
+  "plugin": "Cute Pitch",
+  "version": "1.0.0",
+  "name": "+12 Formant",
+  "author": "Moebytes",
+  "modified": "2026-06-24T23:15:36.071-04:00",
+  "presetFormat": 1,
+  "parameters": {
+    "pitch": "0.0st",
+    "formant": "12.0st",
+    "pitchLFOType": "square",
+    "pitchLFORate": "1/4",
+    "pitchLFOAmount": "0%",
+    "pitchLFOInvert": "Off"
+  }
+}

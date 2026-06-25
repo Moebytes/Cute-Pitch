@@ -1,0 +1,16 @@
+{
+  "plugin": "Cute Pitch",
+  "version": "1.0.0",
+  "name": "1-32 Hyper Telephone",
+  "author": "Moebytes",
+  "modified": "2026-06-24T23:17:55.450-04:00",
+  "presetFormat": 1,
+  "parameters": {
+    "pitch": "24.0st",
+    "formant": "0.0st",
+    "pitchLFOType": "square",
+    "pitchLFORate": "1/32",
+    "pitchLFOAmount": "100%",
+    "pitchLFOInvert": "Off"
+  }
+}
