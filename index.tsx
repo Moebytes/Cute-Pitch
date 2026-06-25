@@ -47,6 +47,7 @@ const App: React.FunctionComponent = () => {
 
     return (
         <div className="app">
+            <ThemeContext.Provider value={{theme, setTheme}}>
             <div className="title-container">
                 <span className="title-text">Cute Pitch</span>
                 {theme === "light" ? 
@@ -76,6 +77,7 @@ const App: React.FunctionComponent = () => {
             <div className="preset-container">
                 <PresetBar/>
             </div>
+            </ThemeContext.Provider>
         </div>
     )
 

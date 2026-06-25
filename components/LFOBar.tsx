@@ -21,8 +21,8 @@ interface LFOTypeProps {
 
 const LFOBarType: React.FunctionComponent<LFOTypeProps & WithJUCEComboBoxProps> = ({color, label, parameterID, value, onChange}) => {
     const {theme, setTheme} = useContext(ThemeContext)
-    
-    const getSelectFilter= () => {
+
+    const getSelectFilter = () => {
         return theme === "light" ? "brightness(0) invert(0)" : "brightness(0) invert(1)"
     }
 
