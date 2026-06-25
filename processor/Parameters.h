@@ -15,7 +15,7 @@ public:
     auto init() noexcept -> void;
     auto blockUpdate() noexcept -> void;
     auto update() noexcept -> void;
-    auto setHostInfo(double bpm, double ppq, const AudioPlayHead::TimeSignature& timeSignature, int outputLatency) noexcept -> void;
+    auto setHostInfo(double bpm, double ppq, const AudioPlayHead::TimeSignature& timeSignature) noexcept -> void;
 
     auto getDefaultParameter(const Array<var>& args, 
         WebBrowserComponent::NativeFunctionCompletion completion) -> void;

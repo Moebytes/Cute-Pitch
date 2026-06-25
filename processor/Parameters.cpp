@@ -154,20 +154,18 @@ auto Parameters::reset() noexcept -> void {
     this->pitchLFO.reset();
 }
 
-auto Parameters::setHostInfo(double bpm, double ppq, const AudioPlayHead::TimeSignature& timeSignature, int outputLatency) noexcept -> void {
+auto Parameters::setHostInfo(double bpm, double ppq, const AudioPlayHead::TimeSignature& timeSignature) noexcept -> void {
     this->bpm = bpm;
     this->ppq = ppq;
     this->timeSignature = timeSignature;
 
-    double latencyPPQ = outputLatency * ((bpm / 60.0) / this->sampleRate);
-
     if (ppq > 0.0) {
-        this->ppq = ppq + latencyPPQ;
+        this->ppq = ppq;
         this->internalPPQ = this->ppq;
     } else {
         double ppqPerSample = (this->bpm / 60.0) / this->sampleRate;
         this->internalPPQ += ppqPerSample * this->blockSize; 
-        this->ppq = this->internalPPQ + latencyPPQ;
+        this->ppq = this->internalPPQ;
     }
 
     this->pitchLFO.syncToHost(this->bpm, this->ppq, this->timeSignature);
