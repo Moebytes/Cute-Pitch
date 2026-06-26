@@ -6,8 +6,8 @@
   "modified": "2026-06-24T23:20:54.765-04:00",
   "presetFormat": 1,
   "parameters": {
-    "pitch": "12.0st",
-    "formant": "12.0st",
+    "pitch": "12st",
+    "formant": "12st",
     "pitchLFOType": "square",
     "pitchLFORate": "1/4",
     "pitchLFOAmount": "0%",

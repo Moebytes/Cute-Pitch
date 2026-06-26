@@ -26,3 +26,4 @@ Download from the [releases](https://github.com/Moebytes/Cute-Pitch/releases) ta
 ### See Also
 
 - [Cute Gain](https://github.com/Moebytes/Cute-Gain) 
+- [Cute Crush](https://github.com/Moebytes/Cute-Crush) 

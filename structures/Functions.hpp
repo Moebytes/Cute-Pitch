@@ -104,7 +104,7 @@ public:
     }
 
     static auto displaySemitones(float value, int) -> String {
-        return String(value, 1) + "st";
+        return String(value, 0) + "st";
     }
 
     static auto parseSemitones(const String& text) -> float {
