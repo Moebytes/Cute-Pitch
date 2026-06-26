@@ -19,9 +19,11 @@ to implement, but I may attempt it one day.
 
 Our design is available here: https://www.figma.com/design/WuLkZAoYlmBKa1sHAjo7Iq/Cute-Pitch
 
-### Installation
+### Purchase
 
-Download from the [releases](https://github.com/Moebytes/Cute-Pitch/releases) tab and rescan the plugins in your DAW.
+<a href="https://moebytes.gumroad.com/l/cute-pitch" target="_blank">
+  <img src="assets/gumroad.svg" style="height:60px;"/>
+</a>
 
 ### See Also
 
