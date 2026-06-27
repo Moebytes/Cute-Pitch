@@ -137,7 +137,7 @@ auto Processor::processBlock(AudioBuffer<float>& buffer, [[maybe_unused]] MidiBu
         this->pitchShifter.setTransposeSemitones(this->parameters.pitch);
         this->pitchShifter.setFormantSemitones(this->parameters.formant, this->parameters.preserveFormant);
 
-        int count = std::min(chunkSize, buffer.getNumSamples() - sample);
+        int count = (std::min)(chunkSize, buffer.getNumSamples() - sample);
 
         float* in[2] = {
             this->inputSamples[0] + sample,
