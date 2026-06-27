@@ -28,6 +28,9 @@ public:
     float formant = 0.0f;
     AudioParameterFloat* formantParam;
 
+    bool preserveFormant = false;
+    AudioParameterBool*  preserveFormantParam;
+
     LFO pitchLFO;
     float pitchLFOAmount = 0.0f;
     AudioParameterChoice* pitchLFOTypeParam;

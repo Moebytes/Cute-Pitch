@@ -1,0 +1,29 @@
+.formant-checkbox-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.formant-checkbox-text {
+    color: var(--textColor);
+    font-family: Nagino, sans-serif;
+    font-weight: bold;
+    letter-spacing: 0.12rem;
+    font-size: 2.0rem;
+    margin-bottom: 1.25rem;
+}
+
+.formant-checkbox {
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 0.2rem solid var(--mainColor);
+    margin-top: -1.0rem;
+    border-radius: 0;
+    cursor: pointer;
+
+    &.checked {
+        background: var(--mainColor);
+    }
+}

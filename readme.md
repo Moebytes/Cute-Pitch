@@ -7,6 +7,7 @@ Cute Pitch is a VST plugin for pitch and formant shifting.
 ### Controls:
 - Pitch - the pitch shift in semitones (-24/+24)
 - Formant - the formant shift in semitones (-24/+24)
+- Preserve Formant - the algorithm preserves formants if enabled
 - Pitch LFO Waveform - pick from square, sawtooth, triangle, and sine shapes for the pitch LFO. 
 - Pitch LFO Rate - the speed of the pitch LFO in bpm synced times.
 - Pitch LFO Amount - the amount of the pitch LFO effect applied.

@@ -6,6 +6,7 @@ class ParameterIDs {
 public:
     ParameterID pitch;
     ParameterID formant;
+    ParameterID preserveFormant;
     ParameterID pitchLFOType;
     ParameterID pitchLFORate;
     ParameterID pitchLFOAmount;
@@ -39,6 +40,7 @@ public:
 
         parameterIDs.pitch = getParameter("pitch");
         parameterIDs.formant = getParameter("formant");
+        parameterIDs.preserveFormant = getParameter("preserveFormant");
         parameterIDs.pitchLFOType = getParameter("pitchLFOType");
         parameterIDs.pitchLFORate = getParameter("pitchLFORate");
         parameterIDs.pitchLFOAmount = getParameter("pitchLFOAmount");

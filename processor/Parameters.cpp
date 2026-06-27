@@ -44,7 +44,8 @@ Parameters::Parameters(AudioProcessorValueTreeState& tree) : tree(tree) {
     };
 
     auto boolParameters = std::vector<BoolPair>{
-        {pitchLFOInvertParam, &paramIDs.pitchLFOInvert}
+        {pitchLFOInvertParam, &paramIDs.pitchLFOInvert},
+        {preserveFormantParam, &paramIDs.preserveFormant}
     };
 
     auto choiceParameters = std::vector<ChoicePair>{
@@ -77,6 +78,10 @@ auto Parameters::createParameterLayout() -> AudioProcessorValueTreeState::Parame
         paramIDs.formant, "Formant", NormalisableRange<float>{-24.0f, 24.0f, 0.0f}, 0.0f,
         AudioParameterFloatAttributes().withStringFromValueFunction(Functions::displaySemitones)
         .withValueFromStringFunction(Functions::parseSemitones)
+    ));
+
+    layout.add(std::make_unique<AudioParameterBool>(
+        paramIDs.preserveFormant, "Preserve Formant", false
     ));
 
     layout.add(std::make_unique<AudioParameterChoice>(
@@ -181,6 +186,8 @@ auto Parameters::blockUpdate() noexcept -> void {
     for (const auto& [param, smoother] : smoothers) {
         smoother->setTargetValue(param->get());
     }
+
+    this->preserveFormant = this->preserveFormantParam->get();
 
     this->pitchLFO.setType(this->pitchLFOTypeParam->getCurrentChoiceName());
     this->pitchLFO.setSyncedRate(this->pitchLFORateParam->get());

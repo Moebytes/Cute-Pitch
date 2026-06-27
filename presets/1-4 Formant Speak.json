@@ -8,6 +8,7 @@
   "parameters": {
     "pitch": "0st",
     "formant": "12st",
+    "preserveFormant": "Off",
     "pitchLFOType": "sine",
     "pitchLFORate": "1/4",
     "pitchLFOAmount": "100%",

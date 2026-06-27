@@ -8,6 +8,7 @@
   "parameters": {
     "pitch": "12st",
     "formant": "0st",
+    "preserveFormant": "Off",
     "pitchLFOType": "triangle",
     "pitchLFORate": "4/1",
     "pitchLFOAmount": "100%",

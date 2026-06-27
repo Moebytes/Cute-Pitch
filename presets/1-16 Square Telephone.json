@@ -8,6 +8,7 @@
   "parameters": {
     "pitch": "12st",
     "formant": "0st",
+    "preserveFormant": "Off",
     "pitchLFOType": "square",
     "pitchLFORate": "1/16",
     "pitchLFOAmount": "100%",

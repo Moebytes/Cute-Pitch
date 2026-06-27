@@ -68,6 +68,8 @@ auto Processor::prepareToPlay(double sampleRate, int samplesPerBlock) -> void {
 
     this->pitchShifter.configure(getTotalNumInputChannels(), 5120, 1024, false);
     this->copyBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+
+    this->setLatencySamples(this->pitchShifter.outputLatency());
 }
 
 auto Processor::releaseResources() -> void {}
@@ -97,23 +99,20 @@ auto Processor::processBlock(AudioBuffer<float>& buffer, [[maybe_unused]] MidiBu
     this->parameters.setHostInfo(bpm, ppq, timeSignature);
     this->parameters.blockUpdate();
 
-    this->parameters.update();
-
     int blocks = this->pitchShifter.blockSamples();
     int interval = this->pitchShifter.intervalSamples();
 
     if (this->parameters.pitchLFOAmount > 0.0f) {
         if (blocks != 2048 && interval != 384) {
             this->pitchShifter.configure(getTotalNumInputChannels(), 2048, 384, false);
+            this->setLatencySamples(this->pitchShifter.outputLatency());
         }
     } else {
         if (blocks != 5120 && interval != 1024) {
             this->pitchShifter.configure(getTotalNumInputChannels(), 5120, 1024, false);
+            this->setLatencySamples(this->pitchShifter.outputLatency());
         }
     }
-
-    this->pitchShifter.setTransposeSemitones(this->parameters.pitch);
-    this->pitchShifter.setFormantSemitones(this->parameters.formant);
 
     this->copyBuffer.makeCopyOf(buffer);
  
@@ -123,7 +122,35 @@ auto Processor::processBlock(AudioBuffer<float>& buffer, [[maybe_unused]] MidiBu
     this->outputSamples[0] = buffer.getWritePointer(0);
     this->outputSamples[1] = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1): this->outputSamples[0];
 
-    this->pitchShifter.process(this->inputSamples, buffer.getNumSamples(), this->outputSamples, buffer.getNumSamples());
+    double ppqPerSample = (bpm / 60.0) / getSampleRate();
+
+    int chunkSize = 64;
+
+    for (int sample = 0; sample < buffer.getNumSamples(); sample+=chunkSize) {
+        if (ppq > 0.0) {
+            double samplePPQ = ppq + sample * ppqPerSample;
+            this->parameters.pitchLFO.syncPPQ(samplePPQ);
+        }
+
+        this->parameters.update();
+        
+        this->pitchShifter.setTransposeSemitones(this->parameters.pitch);
+        this->pitchShifter.setFormantSemitones(this->parameters.formant, this->parameters.preserveFormant);
+
+        int count = std::min(chunkSize, buffer.getNumSamples() - sample);
+
+        float* in[2] = {
+            this->inputSamples[0] + sample,
+            this->inputSamples[1] + sample
+        };
+
+        float* out[2] = {
+            this->outputSamples[0] + sample,
+            this->outputSamples[1] + sample
+        };
+
+        this->pitchShifter.process(in, count, out, count);
+    }
 
     #if JUCE_DEBUG
         Functions::checkAudioSafety(buffer);

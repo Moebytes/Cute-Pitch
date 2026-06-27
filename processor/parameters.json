@@ -1,6 +1,7 @@
 {
     "pitch": {"id": "pitch", "version": 1},
     "formant": {"id": "formant", "version": 1},
+    "preserveFormant": {"id": "preserveFormant", "version": 1},
     "pitchLFOType": {"id": "pitchLFOType", "version": 1},
     "pitchLFORate": {"id": "pitchLFORate", "version": 1},
     "pitchLFOAmount": {"id": "pitchLFOAmount", "version": 1},

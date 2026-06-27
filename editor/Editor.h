@@ -28,6 +28,9 @@ private:
     WebSliderRelay formantRelay {Parameters::paramIDs.formant.getParamID()};
     WebSliderParameterAttachment formantAttachment {*this->processor.parameters.formantParam, formantRelay, nullptr};
 
+    WebToggleButtonRelay preserveFormantRelay {Parameters::paramIDs.preserveFormant.getParamID()};
+    WebToggleButtonParameterAttachment preserveFormantRelayAttachment {*this->processor.parameters.preserveFormantParam, preserveFormantRelay, nullptr};
+
     WebComboBoxRelay pitchLFOTypeRelay {Parameters::paramIDs.pitchLFOType.getParamID()};
     WebComboBoxParameterAttachment pitchLFOTypeAttachment {*this->processor.parameters.pitchLFOTypeParam, pitchLFOTypeRelay, nullptr};
     WebSliderRelay pitchLFORateRelay {Parameters::paramIDs.pitchLFORate.getParamID()};

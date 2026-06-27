@@ -2,6 +2,7 @@ import "bootstrap/dist/css/bootstrap.min.css"
 import React, {useState, useEffect} from "react"
 import {createRoot} from "react-dom/client"
 import Slider from "./components/Slider"
+import FormantCheckbox from "./components/FormantCheckbox"
 import LFOBar from "./components/LFOBar"
 import PresetBar from "./components/PresetBar"
 import DarkIcon from "./assets/dark.svg"
@@ -63,6 +64,9 @@ const App: React.FunctionComponent = () => {
                     label={parameters.formant.id.toUpperCase()} 
                     parameterID={parameters.formant.id} 
                     color="#FF4EA7"/>
+            </div>
+            <div className="formant-container">
+                <FormantCheckbox parameterID={parameters.preserveFormant.id}/>
             </div>
             <div className="lfo-container">
                 <LFOBar 
