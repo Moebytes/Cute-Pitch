@@ -28,4 +28,5 @@ Our design is available here: https://www.figma.com/design/WuLkZAoYlmBKa1sHAjo7I
 ### See Also
 
 - [Cute Gain](https://github.com/Moebytes/Cute-Gain) 
-- [Cute Crush](https://github.com/Moebytes/Cute-Crush) 
+- [Cute Crush](https://github.com/Moebytes/Cute-Crush)
+- [Cute Filter](https://github.com/Moebytes/Cute-Filter)
