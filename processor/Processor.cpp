@@ -69,7 +69,7 @@ auto Processor::prepareToPlay(double sampleRate, int samplesPerBlock) -> void {
     this->pitchShifter.configure(getTotalNumInputChannels(), 5120, 1024, false);
     this->copyBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
 
-    this->setLatencySamples(this->pitchShifter.outputLatency());
+    this->setLatencySamples(this->pitchShifter.inputLatency() + this->pitchShifter.outputLatency());
 }
 
 auto Processor::releaseResources() -> void {}
@@ -105,12 +105,12 @@ auto Processor::processBlock(AudioBuffer<float>& buffer, [[maybe_unused]] MidiBu
     if (this->parameters.pitchLFOAmount > 0.0f) {
         if (blocks != 2048 && interval != 384) {
             this->pitchShifter.configure(getTotalNumInputChannels(), 2048, 384, false);
-            this->setLatencySamples(this->pitchShifter.outputLatency());
+            this->setLatencySamples(this->pitchShifter.inputLatency() + this->pitchShifter.outputLatency());
         }
     } else {
         if (blocks != 5120 && interval != 1024) {
             this->pitchShifter.configure(getTotalNumInputChannels(), 5120, 1024, false);
-            this->setLatencySamples(this->pitchShifter.outputLatency());
+            this->setLatencySamples(this->pitchShifter.inputLatency() + this->pitchShifter.outputLatency());
         }
     }
 
