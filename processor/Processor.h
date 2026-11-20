@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "Parameters.h"
 #include "PresetManager.h"
-#include "signalsmith-stetch.h"
+#include "PitchShifter.hpp"
 
 using TimeSignature = AudioPlayHead::TimeSignature;
 
@@ -12,6 +12,7 @@ public:
   ~Processor() override;
 
   auto prepareToPlay(double sampleRate, int samplesPerBlock) -> void override;
+  auto reset() -> void override;
   auto releaseResources() -> void override;
   auto processBlock(AudioBuffer<float>&, MidiBuffer&) -> void override;
   auto getHostInfo() noexcept -> std::tuple<double, double, TimeSignature>;
@@ -43,10 +44,7 @@ public:
   PresetManager presetManager;
 
 private:
-  signalsmith::stretch::SignalsmithStretch<float> pitchShifter;
-  std::array<float*, 2> inputSamples;
-  std::array<float*, 2> outputSamples;
-  AudioBuffer<float> copyBuffer;
+  PitchShifter pitchShifter;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Processor)
 };

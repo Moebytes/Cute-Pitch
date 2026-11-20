@@ -117,9 +117,9 @@ auto Parameters::getDefaultParameter(const Array<var>& args,
     completion(defaultValue);
 }
 
-auto Parameters::prepareToPlay(double sampleRate, int blockSize) noexcept -> void {
+auto Parameters::prepareToPlay(double sampleRate) noexcept -> void {
     this->sampleRate = sampleRate;
-    this->blockSize = blockSize;
+    this->internalPPQ = 0.0;
 
     double duration = 0.001;
 
@@ -161,23 +161,12 @@ auto Parameters::reset() noexcept -> void {
 
 auto Parameters::setHostInfo(double bpm, double ppq, const AudioPlayHead::TimeSignature& timeSignature) noexcept -> void {
     this->bpm = bpm;
-    this->ppq = ppq;
-    this->timeSignature = timeSignature;
-
-    if (ppq > 0.0) {
-        this->ppq = ppq;
-        this->internalPPQ = this->ppq;
-    } else {
-        double ppqPerSample = (this->bpm / 60.0) / this->sampleRate;
-        this->internalPPQ += ppqPerSample * this->blockSize; 
-        this->ppq = this->internalPPQ;
-    }
-
-    this->pitchLFO.syncToHost(this->bpm, this->ppq, this->timeSignature);
+    if (ppq >= 0.0) this->internalPPQ = ppq;
+    this->pitchLFO.syncToHost(bpm, this->internalPPQ, timeSignature);
 }
 
 auto Parameters::blockUpdate() noexcept -> void {
-    auto smoothers = std::vector{
+    auto smoothers = std::array{
         std::pair{pitchParam, &pitchSmoother},
         std::pair{formantParam, &formantSmoother},
         std::pair{pitchLFOAmountParam, &pitchLFOAmountSmoother}
@@ -194,12 +183,14 @@ auto Parameters::blockUpdate() noexcept -> void {
     this->pitchLFO.setPhaseInvert(this->pitchLFOInvertParam->get());
 }
 
-auto Parameters::update() noexcept -> void {
-    this->pitch = pitchSmoother.getNextValue();
-    this->formant = formantSmoother.getNextValue();
+auto Parameters::update(int count) noexcept -> void {
+    this->pitch = pitchSmoother.skip(count);
+    this->formant = formantSmoother.skip(count);
 
+    this->pitchLFO.syncPPQ(this->internalPPQ);
+    this->internalPPQ += (this->bpm / 60.0) * count / this->sampleRate;
     float pitchLFOValue = this->pitchLFO.getSample();
-    this->pitchLFOAmount = this->pitchLFOAmountSmoother.getNextValue();
+    this->pitchLFOAmount = this->pitchLFOAmountSmoother.skip(count);
 
     this->pitch *= jmap(pitchLFOValue, -1.0f, 1.0f, 1.0f - this->pitchLFOAmount, 1.0f);
     this->formant *= jmap(pitchLFOValue, -1.0f, 1.0f, 1.0f - this->pitchLFOAmount, 1.0f);

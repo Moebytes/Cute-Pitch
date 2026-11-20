@@ -62,27 +62,29 @@ auto JUCE_CALLTYPE createPluginFilter() -> AudioProcessor* {
     return new Processor();
 }
 
-auto Processor::prepareToPlay(double sampleRate, int samplesPerBlock) -> void {
-    this->parameters.prepareToPlay(sampleRate, samplesPerBlock);
+auto Processor::prepareToPlay(double sampleRate, int) -> void {
+    this->parameters.prepareToPlay(sampleRate);
     this->parameters.reset();
 
-    this->pitchShifter.configure(getTotalNumInputChannels(), 5120, 1024, false);
-    this->copyBuffer.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+    this->pitchShifter.prepareToPlay(sampleRate, getTotalNumInputChannels());
+    this->setLatencySamples(this->pitchShifter.latencySamples());
+}
 
-    this->setLatencySamples(this->pitchShifter.inputLatency() + this->pitchShifter.outputLatency());
+auto Processor::reset() -> void {
+    this->pitchShifter.reset();
 }
 
 auto Processor::releaseResources() -> void {}
 
 auto Processor::getHostInfo() noexcept -> std::tuple<double, double, TimeSignature> {
     double bpm = 150.0;
-    double ppq = 0.0;
+    double ppq = -1.0;
     TimeSignature timeSignature{4, 4};
 
     if (auto* playhead = this->getPlayHead()) {
         auto info = playhead->getPosition().orFallback(AudioPlayHead::PositionInfo{});
         bpm = info.getBpm().orFallback(150.0);
-        ppq = info.getPpqPosition().orFallback(0.0);
+        ppq = info.getPpqPosition().orFallback(-1.0);
         timeSignature = info.getTimeSignature().orFallback(TimeSignature{4, 4});
     }
 
@@ -92,64 +94,20 @@ auto Processor::getHostInfo() noexcept -> std::tuple<double, double, TimeSignatu
 auto Processor::processBlock(AudioBuffer<float>& buffer, [[maybe_unused]] MidiBuffer& midiMessages) -> void {
     ScopedNoDenormals noDenormals;
 
-    auto mainInput = this->getBusBuffer(buffer, true, 0);
-    auto mainOutput = this->getBusBuffer(buffer, false, 0);
-
     auto [bpm, ppq, timeSignature] = this->getHostInfo();
     this->parameters.setHostInfo(bpm, ppq, timeSignature);
     this->parameters.blockUpdate();
 
-    int blocks = this->pitchShifter.blockSamples();
-    int interval = this->pitchShifter.intervalSamples();
-
-    if (this->parameters.pitchLFOAmount > 0.0f) {
-        if (blocks != 2048 && interval != 384) {
-            this->pitchShifter.configure(getTotalNumInputChannels(), 2048, 384, false);
-            this->setLatencySamples(this->pitchShifter.inputLatency() + this->pitchShifter.outputLatency());
-        }
-    } else {
-        if (blocks != 5120 && interval != 1024) {
-            this->pitchShifter.configure(getTotalNumInputChannels(), 5120, 1024, false);
-            this->setLatencySamples(this->pitchShifter.inputLatency() + this->pitchShifter.outputLatency());
-        }
+    constexpr int chunkSize = 64;
+    for (int sample = 0; sample < buffer.getNumSamples(); sample += chunkSize) {
+        int count = juce::jmin(chunkSize, buffer.getNumSamples() - sample);
+        this->parameters.update(count);
+        this->pitchShifter.process(buffer, sample, count, this->parameters.pitch,
+            this->parameters.formant, this->parameters.preserveFormant);
     }
 
-    this->copyBuffer.makeCopyOf(buffer);
- 
-    this->inputSamples[0] = this->copyBuffer.getWritePointer(0);
-    this->inputSamples[1] = this->copyBuffer.getNumChannels() > 1 ? this->copyBuffer.getWritePointer(1): this->inputSamples[0];
-
-    this->outputSamples[0] = buffer.getWritePointer(0);
-    this->outputSamples[1] = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1): this->outputSamples[0];
-
-    double ppqPerSample = (bpm / 60.0) / getSampleRate();
-
-    int chunkSize = 64;
-
-    for (int sample = 0; sample < buffer.getNumSamples(); sample+=chunkSize) {
-        if (ppq > 0.0) {
-            double samplePPQ = ppq + sample * ppqPerSample;
-            this->parameters.pitchLFO.syncPPQ(samplePPQ);
-        }
-
-        this->parameters.update();
-        
-        this->pitchShifter.setTransposeSemitones(this->parameters.pitch);
-        this->pitchShifter.setFormantSemitones(this->parameters.formant, this->parameters.preserveFormant);
-
-        int count = (std::min)(chunkSize, buffer.getNumSamples() - sample);
-
-        float* in[2] = {
-            this->inputSamples[0] + sample,
-            this->inputSamples[1] + sample
-        };
-
-        float* out[2] = {
-            this->outputSamples[0] + sample,
-            this->outputSamples[1] + sample
-        };
-
-        this->pitchShifter.process(in, count, out, count);
+    if (getTotalNumInputChannels() == 1 && getTotalNumOutputChannels() == 2) {
+        buffer.copyFrom(1, 0, buffer, 0, 0, buffer.getNumSamples());
     }
 
     #if JUCE_DEBUG

@@ -13,8 +13,6 @@ Cute Pitch is a VST plugin for pitch and formant shifting.
 - Pitch LFO Amount - the amount of the pitch LFO effect applied.
 - Pitch LFO Invert - inverts the phase of the pitch LFO.
 
-I used a third party lib to do the pitch shifting because... that is way too complex for me 
-to implement, but I may attempt it one day.
 
 ### Design
 

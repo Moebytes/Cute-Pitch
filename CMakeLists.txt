@@ -4,7 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(CutePitch VERSION 1.0.0)
+project(CutePitch VERSION 1.0.1)
 
 option(WEBVIEW_DEV_MODE "Enable webview dev mode (load from disk)" OFF)
 
